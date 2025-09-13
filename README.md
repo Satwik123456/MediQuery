@@ -1,66 +1,50 @@
-# RAG-based Medical FAQ Chatbot (Demo)
+💊 RAG-based Medical FAQ Chatbot
 
-This repository contains an end-to-end, local-demo-ready Retrieval-Augmented Generation (RAG) chatbot that answers medical FAQ queries using a provided dataset (`medical_faqs_100.csv`).
+A Retrieval-Augmented Generation (RAG) chatbot that answers common medical FAQs using a knowledge base of ~100 questions and answers.
+Built with FAISS, Sentence Transformers, OpenAI GPT, and a Streamlit interface.
 
-**Key features**
-- Preprocesses the provided CSV of medical FAQs.
-- Builds a local FAISS vector index from embeddings (instructions included).
-- Simple Streamlit UI to ask questions and get answers grounded in the dataset.
-- All OpenAI API usage is performed by reading your local `OPENAI_API_KEY` environment variable (never hard-coded).
+⚠️ Disclaimer: This chatbot is for educational/demo purposes only. It is not a substitute for professional medical advice.
 
-## What I built (scaffold)
-- `preprocess.py` - inspects & chunks the dataset (safe to run offline).
-- `build_index.py` - builds embeddings & FAISS index (requires OpenAI key).
-- `app.py` - Streamlit application to interact with the chatbot.
-- `rag_query.py` - RAG pipeline glue: retrieve top-k + call OpenAI completions.
-- `utils.py` - helper utilities.
-- `requirements.txt` - Python dependencies.
-- `.gitignore` - exclude secrets and env files.
+🚀 Features
 
-## Dataset
-We use the provided `medical_faqs_100.csv`. Please place it in the project root (it already exists for you).
+Retrieval-Augmented Generation (RAG) pipeline
+Embedding-based search using FAISS
+Context-aware answers powered by OpenAI GPT
+Simple and interactive Streamlit UI
+Modular, documented codebase for easy extension
 
-## Setup (local)
-1. Create a Python environment (recommended `venv` or `conda`):
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate   # macOS / Linux
-   .\.venv\Scripts\activate  # Windows PowerShell
-   pip install -r requirements.txt
-   ```
+Project Structure
+├── app.py               # Streamlit app (chatbot interface)
+├── build_index.py       # Script to build FAISS index
+├── medical_faqs_100.csv # Dataset (100 medical FAQs)
+├── index/               # Saved FAISS index + mapping
+├── requirements.txt     # Python dependencies
+├── .env                 # API key (not pushed to GitHub)
+└── README.md
 
-2. Set your OpenAI API key (do NOT commit this to GitHub):
-   - macOS / Linux:
-     ```bash
-     export OPENAI_API_KEY="sk-..."
-     ```
-   - Windows (PowerShell):
-     ```powershell
-     setx OPENAI_API_KEY "sk-..."
-     ```
+⚡ Setup & Usage
+1️⃣ Clone the repo
+git clone https://github.com/yourusername/rag-medical-chatbot.git
+cd rag-medical-chatbot
 
-3. Build the FAISS index (this uses OpenAI embeddings):
-   ```bash
-   python build_index.py --input medical_faqs_100.csv --index-dir ./index
-   ```
+2️⃣ Create a virtual environment
+python -m venv .venv
 
-4. Run the Streamlit app:
-   ```bash
-   streamlit run app.py
-   ```
+⚠️ On Windows PowerShell, you may need to allow script execution first:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Then activate the environment:
 
-## Notes about security
-- **Do not** add your API key to the repository. Use environment variables as shown above.
-- If you accidentally leak a key, revoke it immediately from the OpenAI dashboard.
+.\.venv\Scripts\activate
 
-## Evaluation checklist
-- Correctness of RAG pipeline: `build_index.py` + `rag_query.py`.
-- Searchable knowledge base: FAISS index of embeddings.
-- Quality of responses: LLM is called with retrieved context only.
-- End-to-end demo: `app.py` (Streamlit).
+3️⃣ Install dependencies
+pip install -r requirements.txt
 
-## Design choices (short)
-- FAISS for local vector store to keep the demo free and portable.
-- OpenAI embeddings + GPT for generation (configurable model names).
-- Streamlit for quick, user-friendly demo UI.
+4️⃣ Add OpenAI API key
+Create a .env file in the root folder:
+OPENAI_API_KEY=your-secret-key-here
 
+5️⃣ Build the index
+python build_index.py --input medical_faqs_100.csv --index-dir ./index
+
+6️⃣ Run the chatbot
+streamlit run app.py

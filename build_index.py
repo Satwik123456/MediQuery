@@ -1,44 +1,53 @@
+# build_index.py
 import os
-import pickle
+import argparse
 import pandas as pd
 import faiss
+import numpy as np
+import pickle
 from sentence_transformers import SentenceTransformer
 
 def build_index(input_csv, index_dir):
     # Load CSV
     df = pd.read_csv(input_csv)
+    # Normalize headers
     df.columns = df.columns.str.strip().str.lower()
 
-    # Extract texts
-    texts = df["question"].astype(str) + " " + df["answer"].astype(str)
+    # Accept either 'question'/'answer' or 'Question'/'Answer'
+    if "question" not in df.columns or "answer" not in df.columns:
+        raise ValueError("CSV must contain 'question' and 'answer' columns (case-insensitive).")
 
-    # Load embedding model
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    embeddings = model.encode(texts.tolist(), show_progress_bar=True)
+    # Combine question + answer for an embedding context
+    texts = (df["question"].astype(str) + " " + df["answer"].astype(str)).tolist()
 
-    # Create FAISS index
+    # Load embedding model (downloads first time)
+    print("Loading SentenceTransformer (this downloads the model if not cached)...")
+    embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    # Create embeddings (numpy array)
+    print(f"Generating embeddings for {len(texts)} documents...")
+    embeddings = embed_model.encode(texts, convert_to_numpy=True, show_progress_bar=True)
+    embeddings = np.array(embeddings).astype("float32")
+
+    # Build FAISS index (L2)
     dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
     index.add(embeddings)
 
-    # Ensure index directory exists
+    # Save index and mapping
     os.makedirs(index_dir, exist_ok=True)
-
-    # Save FAISS index
     faiss.write_index(index, os.path.join(index_dir, "faiss.index"))
 
-    # Save mapping (id → question+answer)
-    mapping = {i: {"question": df["question"][i], "answer": df["answer"][i]} for i in range(len(df))}
+    # Save mapping: id -> {question, answer}
+    mapping = {i: {"question": df["question"].iloc[i], "answer": df["answer"].iloc[i]} for i in range(len(df))}
     with open(os.path.join(index_dir, "mapping.pkl"), "wb") as f:
         pickle.dump(mapping, f)
 
-    print(f"✅ Index built successfully! Saved to {index_dir}")
+    print("Index built and saved to:", index_dir)
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, required=True, help="Path to input CSV file")
-    parser.add_argument("--index-dir", type=str, required=True, help="Directory to save index")
+    parser.add_argument("--input", required=True, help="Path to input CSV (medical_faqs_100.csv)")
+    parser.add_argument("--index-dir", required=True, help="Directory to save FAISS index and mapping")
     args = parser.parse_args()
-
     build_index(args.input, args.index_dir)

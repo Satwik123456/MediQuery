@@ -1,4 +1,4 @@
-💊 RAG-based Medical FAQ Chatbot
+💊 MediQuery(RAG-based Medical FAQ Chatbot)
 
 A Retrieval-Augmented Generation (RAG) chatbot that answers common medical FAQs using a knowledge base of ~100 questions and answers.
 Built with FAISS, Sentence Transformers, OpenAI GPT, and a Streamlit interface.

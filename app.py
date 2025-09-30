@@ -3,14 +3,22 @@ import os
 import pickle
 import faiss
 import numpy as np
+import subprocess
 import streamlit as st
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
 
-# Config
+# --- Auto-build FAISS index if missing ---
 INDEX_DIR = "./index"
 FAISS_PATH = os.path.join(INDEX_DIR, "faiss.index")
 MAPPING_PATH = os.path.join(INDEX_DIR, "mapping.pkl")
+
+if not os.path.exists(FAISS_PATH):
+    st.info("Hang on, your data is loading… This may take a minute.")
+    subprocess.run(["python", "build_index.py", "--input", "train.csv", "--index-dir", INDEX_DIR])
+    st.success("FAISS index built successfully!")
+
+# Config
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"  # for embeddings
 QA_MODEL_NAME = "distilbert-base-cased-distilled-squad"  # extractive QA model
 
@@ -20,7 +28,7 @@ st.markdown("**Note:** Local-only, free — answers are extractive from the FAQ 
 
 # Check index files
 if not os.path.exists(FAISS_PATH) or not os.path.exists(MAPPING_PATH):
-    st.error("Index not found. Run `python build_index.py --input medical_faqs_100.csv --index-dir ./index` first.")
+    st.error("Index not found. Run `python build_index.py --input train.csv --index-dir ./index` first.")
     st.stop()
 
 # Load mapping and FAISS
@@ -52,21 +60,16 @@ def retrieve(query, k=5):
     return docs
 
 def answer_with_qa(query, docs):
-    # Run QA for each retrieved doc, collect scores, pick best
     candidates = []
     for doc in docs:
         try:
             res = qa_pipeline(question=query, context=doc["text"])
-            # result: {'score': float, 'start': int, 'end': int, 'answer': str}
             candidates.append({"id": doc["id"], "answer": res.get("answer", ""), "score": float(res.get("score", 0)), "source_q": doc["question"]})
-        except Exception as e:
-            # skip if a doc is too long or model fails
+        except Exception:
             continue
     if not candidates:
         return None, []
-    # pick best by score
     best = max(candidates, key=lambda x: x["score"])
-    # also return top 3 retrieved as sources
     top_sources = sorted(candidates, key=lambda x: x["score"], reverse=True)[:3]
     return best, top_sources
 
@@ -87,7 +90,6 @@ if st.button("Ask") and query.strip():
         with st.spinner("Running local QA model to extract best answer..."):
             best, top_sources = answer_with_qa(query, docs)
         if best is None or best["score"] < 0.08:
-            # fallback: return the top FAQ answer (conservative)
             fallback = docs[0]["answer"]
             st.subheader("Answer (fallback from FAQ):")
             st.write(fallback)
